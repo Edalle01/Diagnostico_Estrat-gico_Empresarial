@@ -1,0 +1,1 @@
+# Diagnostico_Estrat-gico_Empresarial
