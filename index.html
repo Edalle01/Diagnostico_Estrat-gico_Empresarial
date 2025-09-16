@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Suite de Planeación Estratégica — App SPA</title>
+<style>
+/* ======== Reset & Base ======== */
+*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f8f9fa;color:#212529}
+a{color:inherit;text-decoration:none}button{cursor:pointer}
+:root{
+  --bg:#f8f9fa;--panel:#ffffff;--panel-2:#f1f3f4;--muted:#6c757d;--brand:#0d6efd;--brand-2:#0dcaf0;--accent:#fd7e14;
+  --ok:#198754;--warn:#ffc107;--bad:#dc3545;--line:#dee2e6;--chip:#e9ecef;--shadow:0 4px 16px rgba(0,0,0,.1);
+  --error:#dc3545;--success:#198754;
+}
+.container{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+/* Mobile hamburger menu */
+.mobile-menu-btn{display:none;position:fixed;top:16px;left:16px;z-index:1000;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--brand)}
+.mobile-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999}
+/* ======== Sidebar ======== */
+aside{background:linear-gradient(180deg,var(--panel),var(--panel-2));border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow:auto}
+.brand{display:flex;gap:12px;align-items:center;padding:18px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:inherit;z-index:3}
+.brand .logo{width:36px;height:36px;border-radius:10px;background:conic-gradient(from 220deg at 50% 50%,var(--brand),var(--brand-2),var(--accent));box-shadow:0 0 0 3px #e9ecef,0 0 20px rgba(13,110,253,.2)}
+.brand h1{font-size:16px;line-height:1.2;margin:0}
+.version{font-size:12px;color:var(--muted)}
+.search{padding:12px 16px;border-bottom:1px solid var(--line)}
+.search input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#ffffff;color:#495057;outline:none}
+.nav{padding:10px}
+.nav .group{margin:8px 0}
+.nav .group h3{font-size:12px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin:12px 8px}
+.nav button{width:100%;text-align:left;border:0;background:transparent;color:#495057;padding:10px 12px;border-radius:10px;display:flex;align-items:center;gap:10px}
+.nav button.active,.nav button:hover{background:rgba(13,110,253,.10)}
+.nav svg{opacity:.9}
+/* ======== Header ======== */
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:2}
+header .title{display:flex;align-items:center;gap:12px}
+.badge{padding:6px 10px;border-radius:999px;background:#f8f9fa;border:1px solid var(--line);font-size:12px;color:#495057}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.iconbtn{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);background:#ffffff;padding:8px 12px;border-radius:10px;color:#495057;box-shadow:var(--shadow)}
+.iconbtn:hover{border-color:#0d6efd}
+/* ======== Main ======== */
+main{background:radial-gradient(1200px 800px at 70% -200px,rgba(13,110,253,.04),transparent),radial-gradient(800px 500px at -10% 20%,rgba(25,135,84,.06),transparent);}
+.content{padding:22px;max-width:1200px;margin:0 auto}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(248,249,250,.6));border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{margin:0 0 10px}
+.grid{display:grid;gap:12px}
+.grid.cols-2{grid-template-columns:repeat(2,1fr)}
+.grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.grid.cols-4{grid-template-columns:repeat(4,1fr)}
+@media (max-width: 1024px){
+  .container{grid-template-columns:1fr}
+  .grid.cols-2,.grid.cols-3,.grid.cols-4{grid-template-columns:1fr}
+  aside{height:auto;position:fixed;left:0;top:0;width:280px;z-index:1000;transform:translateX(-100%);transition:transform 0.3s ease}
+  aside.mobile-open{transform:translateX(0)}
+  .mobile-menu-btn{display:block}
+  .mobile-overlay.active{display:block}
+  main{padding-top:60px}
+}
+@media (min-width: 1025px){
+  .mobile-menu-btn{display:none !important}
+  .mobile-overlay{display:none !important}
+}
+/* Validation & Error States */
+.input.error{border-color:var(--error);background:rgba(255,107,107,0.1)}
+.input.success{border-color:var(--success);background:rgba(81,207,102,0.1)}
+.error-message{color:var(--error);font-size:11px;margin-top:4px}
+.success-message{color:var(--success);font-size:11px;margin-top:4px}
+/* Loading States */
+.loading{opacity:0.6;pointer-events:none}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--muted);border-radius:50%;border-top-color:var(--brand);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Enhanced Toast */
+.toast.success{border-color:var(--success);background:rgba(81,207,102,0.1)}
+.toast.error{border-color:var(--error);background:rgba(255,107,107,0.1)}
+/* Import/Export Modal */
+.import-export-area{border:2px dashed var(--line);border-radius:8px;padding:20px;text-align:center;margin:10px 0}
+.import-export-area.dragover{border-color:var(--brand);background:rgba(13,110,253,0.05)}
+.input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#ffffff;color:#495057;outline:none}
+label{font-size:12px;color:#6c757d;margin-bottom:6px;display:block}
+.table{width:100%;border-collapse:collapse;margin-top:6px}
+.table th,.table td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left}
+.table th{color:#495057;font-weight:600}
+.row-actions{display:flex;gap:6px}
+small.helper{color:var(--muted)}
+/* Chips & Scales */
+.chip{display:inline-flex;gap:6px;align-items:center;padding:6px 8px;border-radius:999px;background:var(--chip);border:1px solid var(--line);font-size:12px}
+.scale{height:10px;border-radius:6px;background:linear-gradient(90deg,var(--bad),var(--warn),var(--ok))}
+/* Toast */
+.toast{position:fixed;bottom:18px;right:18px;padding:10px 14px;background:#ffffff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);display:none}
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;padding:16px}
+.modal .box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;max-width:640px;width:100%}
+.modal .box h3{margin-top:0}
+.kpi{display:flex;gap:12px;align-items:center;padding:10px;border:1px dashed var(--line);border-radius:12px}
+.kpi strong{font-size:20px}
+footer{padding:40px 20px;color:#6c757d;text-align:center}
+</style>
+</head>
+<body>
+<div class="container">
+  <aside>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>Suite de Planeación Estratégica</h1>
+        <div class="version">Edición 2025 · SPA</div>
+      </div>
+    </div>
+    <div class="search">
+      <input id="searchNav" placeholder="Buscar módulo…"/>
+    </div>
+    <nav class="nav" id="sidebarNav">
+      <!-- Groups and modules are injected by JS -->
+    </nav>
+  </aside>
+
+  <section style="display:flex;flex-direction:column;">
+    <header>
+      <div class="title">
+        <span id="currentIcon"></span>
+        <div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <h2 id="currentTitle" style="margin:0">Configuración básica</h2>
+            <span class="badge" id="orgBadge">—</span>
+            <span class="badge" id="periodBadge">—</span>
+          </div>
+          <small class="helper" id="moduleDesc">Defina la organización y los periodos del plan.</small>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="iconbtn" id="btnAdd">
+          <span>➕</span><span>Nuevo</span>
+        </button>
+        <button class="iconbtn" id="btnDownload">
+          <span>⬇️</span><span>Descargar</span>
+        </button>
+        <button class="iconbtn" id="btnReport">
+          <span>📄</span><span>Reporte ejecutivo</span>
+        </button>
+        <button class="iconbtn" id="btnReset">
+          <span>🗑️</span><span>Limpiar</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <div class="content" id="content">
+        <!-- Module content injected here -->
+      </div>
+    </main>
+    <footer>Hecho con ♥ para apoyar procesos de planeación estratégica contemporánea (FODA, PESTEL, OKR, BSC, GE, ADL, EFI/EFE, BCG, Ansoff) — Datos guardados localmente en su navegador.</footer>
+  </section>
+</div>
+
+<!-- Mobile Menu Button -->
+<button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+<div class="mobile-overlay" id="mobileOverlay"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Modal (generic) -->
+<div class="modal" id="modal">
+  <div class="box">
+    <h3 id="modalTitle">Editar</h3>
+    <div id="modalBody"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="iconbtn" id="modalCancel">Cancelar</button>
+      <button class="iconbtn" id="modalSave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import/Export Modal -->
+<div class="modal" id="importExportModal">
+  <div class="box">
+    <h3 id="importExportTitle">Importar/Exportar Datos</h3>
+    <div id="importExportBody">
+      <div class="import-export-area" id="dropArea">
+        <p>Arrastra un archivo JSON aquí o haz clic para seleccionar</p>
+        <input type="file" id="fileInput" accept=".json" style="display:none">
+        <button class="iconbtn" id="selectFileBtn">📁 Seleccionar archivo</button>
+      </div>
+      <div style="margin:16px 0">
+        <button class="iconbtn" id="exportDataBtn">📤 Exportar datos actuales</button>
+        <button class="iconbtn" id="backupBtn">💾 Crear respaldo</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="iconbtn" id="importExportCancel">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ==============================
+   Helpers & Storage
+============================== */
+const $ = (sel, ctx=document)=>ctx.querySelector(sel);
+const $$ = (sel, ctx=document)=>Array.from(ctx.querySelectorAll(sel));
+const escapeHtml = (str="")=>String(str)
+  .replace(/&/g,"&amp;")
+  .replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;");
+const escapeAttr = (str="")=>escapeHtml(String(str)).replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+const toast = (msg, type='info')=>{ 
+  const t=$("#toast"); 
+  t.textContent=msg; 
+  t.className=`toast ${type}`;
+  t.style.display="block"; 
+  setTimeout(()=>t.style.display="none",3000); 
+};
+const uid = ()=>crypto.randomUUID ? crypto.randomUUID() : String(Date.now()+Math.random()).replace(".","");
+
+// Enhanced validation functions
+const validateRequired = (value, fieldName) => {
+  if (!value || value.trim() === '') {
+    return `${fieldName} es requerido`;
+  }
+  return null;
+};
+
+const validateNumber = (value, fieldName, min = null, max = null) => {
+  const num = Number(value);
+  if (isNaN(num)) {
+    return `${fieldName} debe ser un número válido`;
+  }
+  if (min !== null && num < min) {
+    return `${fieldName} debe ser mayor o igual a ${min}`;
+  }
+  if (max !== null && num > max) {
+    return `${fieldName} debe ser menor o igual a ${max}`;
+  }
+  return null;
+};
+
+const showFieldError = (fieldId, message) => {
+  const field = $("#" + fieldId);
+  const existingError = field.parentNode.querySelector('.error-message');
+  if (existingError) existingError.remove();
+  
+  if (message) {
+    field.classList.add('error');
+    field.classList.remove('success');
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.textContent = message;
+    field.parentNode.appendChild(errorDiv);
+  } else {
+    field.classList.remove('error');
+    field.classList.add('success');
+  }
+};
+
+const clearFieldErrors = () => {
+  $$('.error-message').forEach(el => el.remove());
+  $$('.input.error').forEach(el => {
+    el.classList.remove('error');
+    el.classList.remove('success');
+  });
+};
+
+const STORAGE_KEY="strategic_planner_v1";
+const loadStore = ()=>{
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null }catch(e){ return null }
+};
+const blankStore = {
+  meta:{org:"",periodo:"2025-2029",inicio:"2025-01",primerMes:"Enero"},
+  conceptos:{mision:"",vision:"",valores:[]},
+  analisis:{
+    foda:{S:[],W:[],O:[],T:[]},                   // {id,tipo,texto,impacto}
+    pestel:[],                   // {dimension, factor, impacto(1-5)}
+    efi:[],                      // {factor,peso,calificacion}
+    efe:[],
+    bcg:[],                      // {unidad,cuota,crecimiento,clasificacion}
+    ansoff:[],                   // {producto,mercado,estrategia}
+    ge:[],                       // {unidad,atractividad,posicion}
+    adl:[]                       // {unidad,etapa,ventaja}
+  },
+  plan:{
+    objetivos:[],               // {id,titulo,descripcion,owner,plazo,etapa,escala,valor}
+    iniciativas:[],             // {id,objetivoId,titulo,responsable,inicio,fin,estado}
+    kpis:[] ,                   // {id,objetivoId,nombre,unidad,baseline,meta,actual}
+    politicas:[],               // {enunciado}
+    cadenaValor:[],             // {proceso,descripcion}
+    factoresClave:[],           // {factor,importancia}
+    conclusiones:[]             // {texto}
+  }
+};
+let store = loadStore() || structuredClone(blankStore);
+const persist = ()=>localStorage.setItem(STORAGE_KEY,JSON.stringify(store));
+
+const getFodaOptions = (pairs)=>{
+  return pairs.flatMap(pair => {
+    const list = store.analisis.foda[pair.key] || [];
+    return list.map(item=>({
+      value:item.texto,
+      label:`${pair.label}: ${item.texto}`
+    }));
+  });
+};
+
+const buildLinkedFactorField = ({prefix,label,options,dataValue,emptyLabel,helper,placeholder,customLabel,info})=>{
+  const hasOptions = options.length>0;
+  const selectedValue = (!hasOptions || (dataValue && !options.some(o=>o.value===dataValue))) ? "__custom__" : (dataValue || "");
+  const placeholderLabel = hasOptions ? (placeholder || `Seleccione ${label.toLowerCase()}`) : (emptyLabel || `No hay ${label.toLowerCase()} disponibles.`);
+  const optionItems = [
+    {value:"", label:placeholderLabel, disabled:true},
+    ...options,
+    {value:"__custom__", label:"Otro (escribir manualmente)"}
+  ];
+  const optionsMarkup = optionItems.map(opt=>{
+    const valueAttr = escapeAttr(opt.value ?? "");
+    const labelText = escapeHtml(opt.label ?? "");
+    const selectedAttr = opt.value === selectedValue ? " selected" : "";
+    const disabledAttr = opt.disabled ? " disabled" : "";
+    return `<option value="${valueAttr}"${selectedAttr}${disabledAttr}>${labelText}</option>`;
+  }).join("");
+  const showCustom = selectedValue === "__custom__";
+  const customValue = showCustom ? (dataValue || "") : "";
+  const helperText = helper || "Si el factor no aparece en la lista, escríbalo manualmente.";
+  const infoMarkup = info ? `<small class="helper">${escapeHtml(info)}</small>` : "";
+  const customLabelText = customLabel || `${label} personalizado`;
+  return `
+    <div class="field-group">
+      <label for="${prefix}Select">${label}</label>
+      <select id="${prefix}Select" class="input" data-force-custom="${!hasOptions}">
+        ${optionsMarkup}
+      </select>
+      ${infoMarkup}
+    </div>
+    <div id="${prefix}CustomWrap" style="margin-top:8px;display:${showCustom?'block':'none'}">
+      <label for="${prefix}Custom">${customLabelText}</label>
+      <textarea id="${prefix}Custom" class="input" rows="4">${escapeHtml(customValue)}</textarea>
+      <small class="helper">${escapeHtml(helperText)}</small>
+    </div>
+  `;
+};
+
+const initLinkedFactorField = (prefix)=>{
+  const selectEl = $("#"+prefix+"Select");
+  const wrapEl = $("#"+prefix+"CustomWrap");
+  const customEl = $("#"+prefix+"Custom");
+  if(!selectEl || !wrapEl) return;
+  const forceCustom = selectEl.dataset.forceCustom === "true";
+  const update = ()=>{
+    if(selectEl.value === "__custom__" || (forceCustom && (!selectEl.value || selectEl.value === ""))){
+      wrapEl.style.display = "block";
+    }else{
+      wrapEl.style.display = "none";
+      if(customEl && selectEl.value !== "__custom__") customEl.value = "";
+    }
+  };
+  update();
+  selectEl.addEventListener("change", update);
+};
+
+/* ==============================
+   Navigation & Modules
+============================== */
+const MODULES = [
+  {group:"Configuración", id:"config", title:"Configuración básica", icon:"⚙️", desc:"Defina la organización, el periodo del plan y metadatos."},
+  {group:"1) Conceptos", id:"mision", title:"Misión", icon:"🎯", desc:"Propósito y razón de ser."},
+  {group:"1) Conceptos", id:"vision", title:"Visión", icon:"🌅", desc:"Futuro deseado a mediano/largo plazo."},
+  {group:"1) Conceptos", id:"valores", title:"Valores", icon:"💎", desc:"Principios y comportamientos."},
+
+  {group:"2) Análisis", id:"foda", title:"FODA", icon:"🧭", desc:"Fortalezas, Oportunidades, Debilidades, Amenazas."},
+  {group:"2) Análisis", id:"pestel", title:"PESTEL", icon:"🌐", desc:"Entorno político, económico, social, tecnológico, ambiental, legal."},
+  {group:"2) Análisis", id:"efi", title:"Matriz EFI", icon:"🧮", desc:"Evaluación de factores internos ponderados."},
+  {group:"2) Análisis", id:"efe", title:"Matriz EFE", icon:"📊", desc:"Evaluación de factores externos ponderados."},
+  {group:"2) Análisis", id:"bcg", title:"Matriz BCG", icon:"🐄", desc:"Portafolio: Estrellas, Vacas, Interrogantes, Perros."},
+  {group:"2) Análisis", id:"ansoff", title:"Matriz Ansoff", icon:"🧭", desc:"Penetración, Desarrollo de mercado/producto, Diversificación."},
+  {group:"2) Análisis", id:"ge", title:"GE–McKinsey", icon:"🧰", desc:"Atractividad vs posición competitiva."},
+  {group:"2) Análisis", id:"adl", title:"Matriz ADL", icon:"📈", desc:"Ciclo de vida del sector y ventaja."},
+
+  {group:"3) Planificación", id:"objetivos", title:"Objetivos (OKR/BSC)", icon:"🎯", desc:"Objetivos estratégicos y resultados clave."},
+  {group:"3) Planificación", id:"kpis", title:"Indicadores (KPI)", icon:"📈", desc:"Medición de desempeño y metas."},
+  {group:"3) Planificación", id:"iniciativas", title:"Iniciativas / Proyectos", icon:"🗓️", desc:"Portafolio y cronograma."},
+  {group:"3) Planificación", id:"politicas", title:"Políticas", icon:"📜", desc:"Lineamientos organizacionales."},
+  {group:"3) Planificación", id:"cadena", title:"Cadena de Valor", icon:"🔗", desc:"Procesos clave y soporte."},
+  {group:"3) Planificación", id:"factores", title:"Factores clave", icon:"⭐", desc:"Factores críticos de éxito."},
+  {group:"3) Planificación", id:"conclusiones", title:"Conclusiones", icon:"📝", desc:"Síntesis de hallazgos y decisiones."}
+];
+
+function buildSidebar(){
+  const nav = $("#sidebarNav");
+  nav.innerHTML="";
+  const groups=[...new Set(MODULES.map(m=>m.group))];
+  groups.forEach(g=>{
+    const gEl=document.createElement("div");
+    gEl.className="group";
+    gEl.innerHTML=`<h3>${g}</h3>`;
+    MODULES.filter(m=>m.group===g).forEach(m=>{
+      const b=document.createElement("button");
+      b.dataset.module=m.id;
+      b.innerHTML=`<span>${m.icon}</span><span>${m.title}</span>`;
+      b.addEventListener("click",()=>openModule(m.id));
+      gEl.appendChild(b);
+    });
+    nav.appendChild(gEl);
+  });
+}
+buildSidebar();
+
+$("#searchNav").addEventListener("input", (e)=>{
+  const term=e.target.value.toLowerCase();
+  $$("#sidebarNav button").forEach(b=>{
+    b.style.display=b.textContent.toLowerCase().includes(term)?"":"none";
+  });
+});
+
+function setHeader(mod){
+  $("#currentIcon").textContent=mod.icon;
+  $("#currentTitle").textContent=mod.title;
+  $("#moduleDesc").textContent=mod.desc;
+  $$("#sidebarNav button").forEach(b=>b.classList.toggle("active", b.dataset.module===mod.id));
+  $("#orgBadge").textContent=store.meta.org?store.meta.org:"Organización no definida";
+  $("#periodBadge").textContent=store.meta.periodo?`Periodo ${store.meta.periodo}`:"Periodo —";
+}
+
+/* ==============================
+   UI Building Blocks
+============================== */
+function buildKV(label, inputHtml){ return `<div class="card"><label>${label}</label>${inputHtml}</div>`; }
+
+function actionBtns(id, editCb, delCb){
+  return `<div class="row-actions">
+    <button class="iconbtn" data-edit="${id}" title="Editar">✏️</button>
+    <button class="iconbtn" data-del="${id}" title="Eliminar">🗑️</button>
+  </div>`;
+}
+
+function gradeColor(v, min=0, max=5){
+  const t=(v-min)/(max-min);
+  const h=Math.max(0,Math.min(120, 120*t));
+  return `hsl(${h} 80% 45%)`;
+}
+
+function download(filename, content, mime="application/json"){
+  const a=document.createElement("a");
+  const blob=new Blob([content], {type:mime});
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+
+/* ==============================
+   Renderers per module
+============================== */
+const RENDERERS={
+  config(){
+    const c=store.meta;
+    $("#content").innerHTML = `
+      <div class="grid cols-2">
+        <div class="card">
+          <h2>Datos del plan</h2>
+          <div class="grid cols-2">
+            <div><label>Organización</label><input class="input" id="org" value="${c.org||""}"/></div>
+            <div><label>Periodo (ej: 2025-2029)</label><input class="input" id="periodo" value="${c.periodo||""}"/></div>
+            <div><label>Primer ejercicio (AAAA-MM)</label><input class="input" id="inicio" value="${c.inicio||""}" placeholder="2025-01"/></div>
+            <div><label>Primer mes del ejercicio</label>
+              <select id="mes" class="input">
+                ${["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"].map(m=>`<option ${c.primerMes===m?"selected":""}>${m}</option>`).join("")}
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="iconbtn" id="saveConfig">💾 Guardar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Estado general</h2>
+          <div class="kpi"><span>🧭</span><div><small class="helper">Módulos completados</small><strong id="kpiModules">0/0</strong></div></div>
+          <div class="kpi"><span>📈</span><div><small class="helper">Indicadores definidos</small><strong>${store.plan.kpis.length}</strong></div></div>
+          <div class="kpi"><span>🗓️</span><div><small class="helper">Iniciativas activas</small><strong>${store.plan.iniciativas.length}</strong></div></div>
+          <div style="margin-top:12px">
+            <label>Escala de colores (impacto/calificación)</label>
+            <div class="scale"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    $("#saveConfig").onclick=()=>{
+      store.meta.org=$("#org").value.trim();
+      store.meta.periodo=$("#periodo").value.trim();
+      store.meta.inicio=$("#inicio").value.trim();
+      store.meta.primerMes=$("#mes").value;
+      persist(); setHeader(currentModule); toast("Configuración actualizada");
+    };
+    const mFilled = ["mision","vision","valores","foda","pestel","efi","efe","objetivos"].filter(k=>{
+      if(k==="mision") return store.conceptos.mision.trim().length>0;
+      if(k==="vision") return store.conceptos.vision.trim().length>0;
+      if(k==="valores") return store.conceptos.valores.length>0;
+      if(k==="foda") return Object.values(store.analisis.foda).some(arr=>arr.length>0);
+      if(k==="pestel") return store.analisis.pestel.length>0;
+      if(k==="efi") return store.analisis.efi.length>0;
+      if(k==="efe") return store.analisis.efe.length>0;
+      if(k==="objetivos") return store.plan.objetivos.length>0;
+      return false;
+    }).length;
+    $("#kpiModules").textContent=`${mFilled}/8`;
+  },
+
+  mision(){
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Declaración de Misión</h2>
+        <textarea id="misionTxt" class="input" rows="6" placeholder="¿Cuál es nuestro propósito central?">${store.conceptos.mision||""}</textarea>
+        <div style="margin-top:10px"><button class="iconbtn" id="save">💾 Guardar</button></div>
+      </div>`;
+    $("#save").onclick=()=>{ store.conceptos.mision=$("#misionTxt").value; persist(); toast("Misión guardada"); };
+  },
+
+  vision(){
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Declaración de Visión</h2>
+        <textarea id="visionTxt" class="input" rows="6" placeholder="¿Cómo se ve el futuro deseado?">${store.conceptos.vision||""}</textarea>
+        <div style="margin-top:10px"><button class="iconbtn" id="save">💾 Guardar</button></div>
+      </div>`;
+    $("#save").onclick=()=>{ store.conceptos.vision=$("#visionTxt").value; persist(); toast("Visión guardada"); };
+  },
+
+  valores(){
+    const rows = store.conceptos.valores.map(v=>`<tr><td>${v.nombre}</td><td>${v.descripcion||""}</td><td>${actionBtns(v.id,"","")}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Valores Organizacionales</h2>
+        <table class="table"><thead><tr><th>Valor</th><th>Descripción</th><th></th></tr></thead>
+        <tbody id="tbody">${rows||""}</tbody></table>
+      </div>`;
+    bindRowActions("valores");
+  },
+
+  foda(){
+    const section=(key,label)=>{
+      const arr=store.analisis.foda[key];
+      return `<div class="card"><h3>${label}</h3>
+        <table class="table"><thead><tr><th>Factor</th><th>Impacto (1-5)</th><th></th></tr></thead>
+          <tbody>${arr.map(i=>`<tr><td>${i.texto}</td><td><span class="chip" style="border-color:${gradeColor(i.impacto)};color:${gradeColor(i.impacto)}">${i.impacto}</span></td><td>${actionBtns(i.id)}</td></tr>`).join("")}</tbody>
+        </table></div>`;
+    };
+    $("#content").innerHTML=`
+      <div class="grid cols-2">
+        ${section("S","Fortalezas")}
+        ${section("W","Debilidades")}
+        ${section("O","Oportunidades")}
+        ${section("T","Amenazas")}
+      </div>`;
+    bindRowActions("foda");
+  },
+
+  pestel(){
+    const rows=store.analisis.pestel.map(i=>`<tr><td>${i.dimension}</td><td>${i.factor}</td><td><span class="chip" style="border-color:${gradeColor(i.impacto)};color:${gradeColor(i.impacto)}">${i.impacto}</span></td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>PESTEL</h2>
+        <table class="table"><thead><tr><th>Dimensión</th><th>Factor</th><th>Impacto (1-5)</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("pestel");
+  },
+
+  efi(){
+    const rows=store.analisis.efi.map(i=>`<tr><td>${i.factor}</td><td>${i.peso.toFixed(2)}</td><td>${i.calificacion.toFixed(2)}</td><td><strong>${(i.peso*i.calificacion).toFixed(2)}</strong></td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    const total=(store.analisis.efi.reduce((a,b)=>a+b.peso,0)).toFixed(2);
+    const puntaje=(store.analisis.efi.reduce((a,b)=>a+(b.peso*b.calificacion),0)).toFixed(2);
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Matriz EFI (Factores Internos)</h2>
+        <table class="table"><thead><tr><th>Factor</th><th>Peso</th><th>Calificación (1-5)</th><th>Puntaje</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr><th>Total</th><th>${total}</th><th></th><th>${puntaje}</th><th></th></tr></tfoot>
+        </table>
+        <small class="helper">Sume pesos ≈ 1.00. Calificación: 1 deficiente – 5 sobresaliente. Fortalezas y Debilidades del módulo FODA se sugieren al agregar nuevos factores.</small>
+      </div>`;
+    bindRowActions("efi");
+  },
+
+  efe(){
+    const rows=store.analisis.efe.map(i=>`<tr><td>${i.factor}</td><td>${i.peso.toFixed(2)}</td><td>${i.calificacion.toFixed(2)}</td><td><strong>${(i.peso*i.calificacion).toFixed(2)}</strong></td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    const total=(store.analisis.efe.reduce((a,b)=>a+b.peso,0)).toFixed(2);
+    const puntaje=(store.analisis.efe.reduce((a,b)=>a+(b.peso*b.calificacion),0)).toFixed(2);
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Matriz EFE (Factores Externos)</h2>
+        <table class="table"><thead><tr><th>Factor</th><th>Peso</th><th>Calificación (1-5)</th><th>Puntaje</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr><th>Total</th><th>${total}</th><th></th><th>${puntaje}</th><th></th></tr></tfoot>
+        </table>
+        <small class="helper">Sume pesos ≈ 1.00. Calificación: 1 baja respuesta – 5 excelente respuesta. Oportunidades y Amenazas del módulo FODA alimentan la lista de factores externos.</small>
+      </div>`;
+    bindRowActions("efe");
+  },
+
+  bcg(){
+    const rows=store.analisis.bcg.map(i=>`<tr><td>${i.unidad}</td><td>${i.cuota}%</td><td>${i.crecimiento}%</td><td>${i.clasificacion||clasificarBCG(i)}</td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Matriz BCG</h2>
+        <table class="table"><thead><tr><th>Unidad</th><th>Cuota relativa</th><th>Crecimiento mercado</th><th>Clasificación</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+        <small class="helper">Clasificación automática según umbrales: Estrella (alta/alta), Vaca (alta/baja), Interrogante (baja/alta), Perro (baja/baja).</small>
+      </div>`;
+    bindRowActions("bcg");
+  },
+
+  ansoff(){
+    const rows=store.analisis.ansoff.map(i=>`<tr><td>${i.producto}</td><td>${i.mercado}</td><td>${i.estrategia||clasificarAnsoff(i)}</td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Matriz Ansoff</h2>
+        <table class="table"><thead><tr><th>Producto</th><th>Mercado</th><th>Estrategia</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("ansoff");
+  },
+
+  ge(){
+    const rows=store.analisis.ge.map(i=>`<tr><td>${i.unidad}</td><td><span class="chip" style="border-color:${gradeColor(i.atractividad)};color:${gradeColor(i.atractividad)}">${i.atractividad}</span></td><td><span class="chip" style="border-color:${gradeColor(i.posicion)};color:${gradeColor(i.posicion)}">${i.posicion}</span></td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>GE – McKinsey</h2>
+        <table class="table"><thead><tr><th>Unidad</th><th>Atractividad (1-5)</th><th>Posición (1-5)</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("ge");
+  },
+
+  adl(){
+    const rows=store.analisis.adl.map(i=>`<tr><td>${i.unidad}</td><td>${i.etapa}</td><td>${i.ventaja}</td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Matriz ADL</h2>
+        <table class="table"><thead><tr><th>Unidad</th><th>Etapa sector</th><th>Ventaja competitiva</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("adl");
+  },
+
+  objetivos(){
+    const rows=store.plan.objetivos.map(i=>`<tr>
+      <td>${i.titulo}</td>
+      <td>${i.owner||""}</td>
+      <td>${i.plazo||""}</td>
+      <td><span class="chip" style="border-color:${gradeColor(i.valor||0,0,i.escala||100)};color:${gradeColor(i.valor||0,0,i.escala||100)}">${i.valor||0}/${i.escala||100}</span></td>
+      <td>${actionBtns(i.id)}</td>
+    </tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Objetivos estratégicos (OKR/BSC)</h2>
+        <table class="table"><thead><tr><th>Objetivo</th><th>Responsable</th><th>Plazo</th><th>Avance</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("objetivos");
+  },
+
+  kpis(){
+    const rows=store.plan.kpis.map(i=>`<tr>
+      <td>${nombreObjetivo(i.objetivoId)}</td>
+      <td>${i.nombre}</td><td>${i.unidad}</td>
+      <td>${i.baseline}</td><td>${i.meta}</td><td><strong style="color:${gradeColor(i.actual,i.baseline,i.meta)}">${i.actual}</strong></td>
+      <td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Indicadores (KPI)</h2>
+        <table class="table"><thead><tr><th>Objetivo</th><th>Indicador</th><th>Unidad</th><th>Base</th><th>Meta</th><th>Actual</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("kpis");
+  },
+
+  iniciativas(){
+    const rows=store.plan.iniciativas.map(i=>`<tr>
+      <td>${nombreObjetivo(i.objetivoId)}</td><td>${i.titulo}</td><td>${i.responsable||""}</td>
+      <td>${i.inicio||""} → ${i.fin||""}</td><td><span class="chip">${i.estado||"Plan"}</span></td>
+      <td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Iniciativas / Proyectos</h2>
+        <table class="table"><thead><tr><th>Objetivo</th><th>Título</th><th>Responsable</th><th>Periodo</th><th>Estado</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("iniciativas");
+  },
+
+  politicas(){
+    const rows=store.plan.politicas.map(i=>`<tr><td>${i.enunciado}</td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Políticas</h2>
+        <table class="table"><thead><tr><th>Enunciado</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("politicas");
+  },
+
+  cadena(){
+    const rows=store.plan.cadenaValor.map(i=>`<tr><td>${i.proceso}</td><td>${i.descripcion||""}</td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Cadena de Valor</h2>
+        <table class="table"><thead><tr><th>Proceso</th><th>Descripción</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("cadena");
+  },
+
+  factores(){
+    const rows=store.plan.factoresClave.map(i=>`<tr><td>${i.factor}</td><td><span class="chip" style="border-color:${gradeColor(i.importancia)};color:${gradeColor(i.importancia)}">${i.importancia}</span></td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Factores Críticos de Éxito</h2>
+        <table class="table"><thead><tr><th>Factor</th><th>Importancia (1-5)</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("factores");
+  },
+
+  conclusiones(){
+    const rows=store.plan.conclusiones.map(i=>`<tr><td>${i.texto}</td><td>${actionBtns(i.id)}</td></tr>`).join("");
+    $("#content").innerHTML=`
+      <div class="card">
+        <h2>Conclusiones</h2>
+        <table class="table"><thead><tr><th>Texto</th><th></th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </div>`;
+    bindRowActions("conclusiones");
+  }
+};
+function clasificarBCG(i){
+  const cuota = Number(i.cuota)||0;
+  const crec = Number(i.crecimiento)||0;
+  const altaCuota = cuota>=50;
+  const altoCrec = crec>=10;
+  return altaCuota && altoCrec ? "Estrella" : altaCuota ? "Vaca" : altoCrec ? "Interrogante" : "Perro";
+}
+function clasificarAnsoff(i){
+  const p=i.producto.toLowerCase(), m=i.mercado.toLowerCase();
+  const nuevoP = /nuevo|nuev/.test(p), nuevoM=/nuevo|nuev/.test(m);
+  if(!nuevoP && !nuevoM) return "Penetración de mercado";
+  if(nuevoP && !nuevoM) return "Desarrollo de producto";
+  if(!nuevoP && nuevoM) return "Desarrollo de mercado";
+  return "Diversificación";
+}
+function nombreObjetivo(id){
+  return (store.plan.objetivos.find(o=>o.id===id)||{}).titulo || "—";
+}
+
+/* ==============================
+   Modal editors
+============================== */
+function openEditor(type, id=null){
+  const modal=$("#modal"); const body=$("#modalBody"); const title=$("#modalTitle");
+  let data=null; let html="";
+  function input(label, id, val="", type="text"){ return `<label>${label}</label><input id="${id}" class="input" value="${val}" type="${type}"/>`; }
+  function number(label, id, val=0, step="0.01"){ return `<label>${label}</label><input id="${id}" class="input" value="${val}" type="number" step="${step}"/>`; }
+  function textarea(label, id, val=""){ return `<label>${label}</label><textarea id="${id}" class="input" rows="4">${val}</textarea>`; }
+  function select(label, id, options, value=""){ return `<label>${label}</label><select id="${id}" class="input">${options.map(o=>`<option ${o==value?'selected':''}>${o}</option>`).join("")}</select>`; }
+
+  const save = ()=>{
+    clearFieldErrors();
+    let hasErrors = false;
+    const idv = id || uid();
+    switch(type){
+      case "valores":{
+        const nombre = $("#nombre").value.trim();
+        const descripcion = $("#desc").value.trim();
+        const nombreError = validateRequired(nombre, "Nombre del valor");
+        if (nombreError) {
+          showFieldError("nombre", nombreError);
+          hasErrors = true;
+        }
+        if (hasErrors) return;
+        const item={id:idv,nombre,descripcion};
+        upsert(store.conceptos.valores,item); break;
+      }
+      case "foda":{
+        const texto = $("#texto").value.trim();
+        const impacto = $("#impacto").value;
+        const textoError = validateRequired(texto, "Factor");
+        const impactoError = validateNumber(impacto, "Impacto", 1, 5);
+        if (textoError) {
+          showFieldError("texto", textoError);
+          hasErrors = true;
+        }
+        if (impactoError) {
+          showFieldError("impacto", impactoError);
+          hasErrors = true;
+        }
+        if (hasErrors) return;
+        const item={id:idv,tipo:$("#tipo").value,texto,impacto:Number(impacto)};
+        const set=store.analisis.foda[item.tipo];
+        upsert(set,item); break;
+      }
+      case "pestel":{
+        const factor = $("#factor").value.trim();
+        const impacto = $("#impacto").value;
+        const factorError = validateRequired(factor, "Factor");
+        const impactoError = validateNumber(impacto, "Impacto", 1, 5);
+        if (factorError) {
+          showFieldError("factor", factorError);
+          hasErrors = true;
+        }
+        if (impactoError) {
+          showFieldError("impacto", impactoError);
+          hasErrors = true;
+        }
+        if (hasErrors) return;
+        const item={id:idv,dimension:$("#dimension").value,factor,impacto:Number(impacto)};
+        upsert(store.analisis.pestel,item); break;
+      }
+      case "efi":{
+        const factorSelect = $("#factorInternoSelect");
+        const customField = $("#factorInternoCustom");
+        let factor = "";
+        let factorFieldId = "factorInternoSelect";
+        if(factorSelect){
+          if(factorSelect.value === "__custom__" || (factorSelect.dataset.forceCustom === "true" && customField)){
+            factor = customField ? customField.value.trim() : "";
+            if(customField) factorFieldId = "factorInternoCustom";
+          }else{
+            factor = factorSelect.value.trim();
+          }
+        }
+        const peso = $("#peso").value;
+        const calificacion = $("#calificacion").value;
+        const factorError = validateRequired(factor, "Factor interno");
+        const pesoError = validateNumber(peso, "Peso", 0, 1);
+        const calificacionError = validateNumber(calificacion, "Calificación", 1, 5);
+        if (factorError) {
+          showFieldError(factorFieldId, factorError);
+          hasErrors = true;
+        }
+        if (pesoError) {
+          showFieldError("peso", pesoError);
+          hasErrors = true;
+        }
+        if (calificacionError) {
+          showFieldError("calificacion", calificacionError);
+          hasErrors = true;
+        }
+        if (hasErrors) return;
+        const item={id:idv,factor,peso:Number(peso),calificacion:Number(calificacion)};
+        upsert(store.analisis.efi,item); break;
+      }
+      case "efe":{
+        const factorSelect = $("#factorExternoSelect");
+        const customField = $("#factorExternoCustom");
+        let factor = "";
+        let factorFieldId = "factorExternoSelect";
+        if(factorSelect){
+          if(factorSelect.value === "__custom__" || (factorSelect.dataset.forceCustom === "true" && customField)){
+            factor = customField ? customField.value.trim() : "";
+            if(customField) factorFieldId = "factorExternoCustom";
+          }else{
+            factor = factorSelect.value.trim();
+          }
+        }
+        const peso = $("#peso").value;
+        const calificacion = $("#calificacion").value;
+        const factorError = validateRequired(factor, "Factor externo");
+        const pesoError = validateNumber(peso, "Peso", 0, 1);
+        const calificacionError = validateNumber(calificacion, "Calificación", 1, 5);
+        if (factorError) {
+          showFieldError(factorFieldId, factorError);
+          hasErrors = true;
+        }
+        if (pesoError) {
+          showFieldError("peso", pesoError);
+          hasErrors = true;
+        }
+        if (calificacionError) {
+          showFieldError("calificacion", calificacionError);
+          hasErrors = true;
+        }
+        if (hasErrors) return;
+        const item={id:idv,factor,peso:Number(peso),calificacion:Number(calificacion)};
+        upsert(store.analisis.efe,item); break;
+      }
+      case "bcg":{
+        const item={id:idv,unidad:$("#unidad").value,cuota:Number($("#cuota").value),crecimiento:Number($("#crecimiento").value)};
+        item.clasificacion=clasificarBCG(item);
+        upsert(store.analisis.bcg,item); break;
+      }
+      case "ansoff":{
+        const item={id:idv,producto:$("#producto").value,mercado:$("#mercado").value};
+        item.estrategia=clasificarAnsoff(item);
+        upsert(store.analisis.ansoff,item); break;
+      }
+      case "ge":{
+        const item={id:idv,unidad:$("#unidad").value,atractividad:Number($("#atractividad").value),posicion:Number($("#posicion").value)};
+        upsert(store.analisis.ge,item); break;
+      }
+      case "adl":{
+        const item={id:idv,unidad:$("#unidad").value,etapa:$("#etapa").value,ventaja:$("#ventaja").value};
+        upsert(store.analisis.adl,item); break;
+      }
+      case "objetivos":{
+        const item={id:idv,titulo:$("#titulo").value,descripcion:$("#descripcion").value,owner:$("#owner").value,plazo:$("#plazo").value,escala:Number($("#escala").value||100),valor:Number($("#valor").value||0)};
+        upsert(store.plan.objetivos,item); break;
+      }
+      case "kpis":{
+        const item={id:idv,objetivoId:$("#obj").value,nombre:$("#nombre").value,unidad:$("#unidad").value,baseline:Number($("#base").value||0),meta:Number($("#meta").value||0),actual:Number($("#actual").value||0)};
+        upsert(store.plan.kpis,item); break;
+      }
+      case "iniciativas":{
+        const item={id:idv,objetivoId:$("#obj").value,titulo:$("#titulo").value,responsable:$("#resp").value,inicio:$("#inicio").value,fin:$("#fin").value,estado:$("#estado").value};
+        upsert(store.plan.iniciativas,item); break;
+      }
+      case "politicas":{
+        const item={id:idv,enunciado:$("#enun").value};
+        upsert(store.plan.politicas,item); break;
+      }
+      case "cadena":{
+        const item={id:idv,proceso:$("#proc").value,descripcion:$("#desc").value};
+        upsert(store.plan.cadenaValor,item); break;
+      }
+      case "factores":{
+        const item={id:idv,factor:$("#factor").value,importancia:Number($("#imp").value)};
+        upsert(store.plan.factoresClave,item); break;
+      }
+      case "conclusiones":{
+        const item={id:idv,texto:$("#texto").value};
+        upsert(store.plan.conclusiones,item); break;
+      }
+    }
+    persist(); modal.style.display="none"; openModule(currentModule.id); toast("Guardado");
+  };
+
+  $("#modalSave").onclick=save;
+  $("#modalCancel").onclick=()=>modal.style.display="none";
+  modal.onclick=(e)=>{ if(e.target===modal) modal.style.display="none"; };
+
+  function findById(){
+    const paths={
+      valores:store.conceptos.valores,
+      pestel:store.analisis.pestel, efi:store.analisis.efi, efe:store.analisis.efe,
+      bcg:store.analisis.bcg, ansoff:store.analisis.ansoff, ge:store.analisis.ge, adl:store.analisis.adl,
+      objetivos:store.plan.objetivos, kpis:store.plan.kpis, iniciativas:store.plan.iniciativas,
+      politicas:store.plan.politicas, cadena:store.plan.cadenaValor, factores:store.plan.factoresClave, conclusiones:store.plan.conclusiones
+    };
+    if(type==="foda"){
+      return ["S","W","O","T"].flatMap(t=>store.analisis.foda[t]).find(x=>x.id===id);
+    }
+    return (paths[type]||[]).find(x=>x.id===id);
+  }
+
+  switch(type){
+    case "valores":{
+      data = id? findById(): {nombre:"",descripcion:""};
+      title.textContent = (id?"Editar":"Nuevo")+" valor";
+      html = `
+        ${input("Nombre del valor","nombre",data.nombre)}
+        ${textarea("Descripción","desc",data.descripcion||"")}
+      `; break;
+    }
+    case "foda":{
+      data = id? findById(): {tipo:"S",texto:"",impacto:3};
+      title.textContent = (id?"Editar":"Nuevo")+ " factor FODA";
+      html = `
+        ${select("Tipo","tipo",["S","W","O","T"],data.tipo)}
+        ${textarea("Factor","texto",data.texto)}
+        ${number("Impacto (1-5)","impacto",data.impacto,1)}
+      `; break;
+    }
+    case "pestel":{
+      data = id? findById(): {dimension:"Político",factor:"",impacto:3};
+      title.textContent=(id?"Editar":"Nuevo")+" factor PESTEL";
+      html=`
+        ${select("Dimensión","dimension",["Político","Económico","Social","Tecnológico","Ambiental","Legal"],data.dimension)}
+        ${textarea("Factor","factor",data.factor)}
+        ${number("Impacto (1-5)","impacto",data.impacto,1)}
+      `; break;
+    }
+    case "efi":{
+      data = id? findById(): {factor:"",peso:0.10,calificacion:3};
+      title.textContent=(id?"Editar":"Nuevo")+" factor EFI";
+      const internalOptions = getFodaOptions([
+        {key:"S",label:"Fortaleza"},
+        {key:"W",label:"Debilidad"}
+      ]);
+      html=`
+        ${buildLinkedFactorField({
+          prefix:"factorInterno",
+          label:"Factor interno (Fortalezas/Debilidades)",
+          options:internalOptions,
+          dataValue:data.factor,
+          emptyLabel:"No hay fortalezas o debilidades registradas en el FODA.",
+          placeholder:"Seleccione un factor interno desde el FODA",
+          customLabel:"Factor interno personalizado",
+          helper:"Selecciona una fortaleza o debilidad existente. Si el factor no aparece en la lista, escríbelo manualmente.",
+          info:"La lista se alimenta automáticamente de las Fortalezas y Debilidades definidas en el módulo FODA."
+        })}
+        ${number("Peso (0-1)","peso",data.peso,"0.01")}
+        ${number("Calificación (1-5)","calificacion",data.calificacion,1)}
+      `; break;
+    }
+    case "efe":{
+      data = id? findById(): {factor:"",peso:0.10,calificacion:3};
+      title.textContent=(id?"Editar":"Nuevo")+" factor EFE";
+      const externalOptions = getFodaOptions([
+        {key:"O",label:"Oportunidad"},
+        {key:"T",label:"Amenaza"}
+      ]);
+      html=`
+        ${buildLinkedFactorField({
+          prefix:"factorExterno",
+          label:"Factor externo (Oportunidades/Amenazas)",
+          options:externalOptions,
+          dataValue:data.factor,
+          emptyLabel:"No hay oportunidades o amenazas registradas en el FODA.",
+          placeholder:"Seleccione un factor externo desde el FODA",
+          customLabel:"Factor externo personalizado",
+          helper:"Selecciona una oportunidad o amenaza existente. Si el factor no aparece en la lista, escríbelo manualmente.",
+          info:"La lista se alimenta automáticamente de las Oportunidades y Amenazas definidas en el módulo FODA."
+        })}
+        ${number("Peso (0-1)","peso",data.peso,"0.01")}
+        ${number("Calificación (1-5)","calificacion",data.calificacion,1)}
+      `; break;
+    }
+    case "bcg":{
+      data = id? findById(): {unidad:"",cuota:50,crecimiento:10};
+      title.textContent=(id?"Editar":"Nueva")+" unidad BCG";
+      html=`${input("Unidad de negocio","unidad",data.unidad)}${number("Cuota relativa (%)","cuota",data.cuota,0.1)}${number("Crecimiento (%)","crecimiento",data.crecimiento,0.1)}`; break;
+    }
+    case "ansoff":{
+      data = id? findById(): {producto:"Producto nuevo",mercado:"Mercado nuevo"};
+      title.textContent=(id?"Editar":"Nueva")+" entrada Ansoff";
+      html=`${input("Producto","producto",data.producto)}${input("Mercado","mercado",data.mercado)}`; break;
+    }
+    case "ge":{
+      data = id? findById(): {unidad:"",atractividad:3,posicion:3};
+      title.textContent=(id?"Editar":"Nueva")+" unidad GE";
+      html=`${input("Unidad","unidad",data.unidad)}${number("Atractividad (1-5)","atractividad",data.atractividad,1)}${number("Posición (1-5)","posicion",data.posicion,1)}`; break;
+    }
+    case "adl":{
+      data = id? findById(): {unidad:"",etapa:"Crecimiento",ventaja:"Diferenciación"};
+      title.textContent=(id?"Editar":"Nueva")+" entrada ADL";
+      html=`${input("Unidad","unidad",data.unidad)}${select("Etapa del sector","etapa",["Nacimiento","Crecimiento","Madurez","Declive"],data.etapa)}${input("Ventaja competitiva","ventaja",data.ventaja)}`; break;
+    }
+    case "objetivos":{
+      data = id? findById(): {titulo:"",descripcion:"",owner:"",plazo:"2025",escala:100,valor:0};
+      title.textContent=(id?"Editar":"Nuevo")+" objetivo";
+      html=`${input("Título","titulo",data.titulo)}${textarea("Descripción","descripcion",data.descripcion||"")}${input("Responsable","owner",data.owner||"")}${input("Plazo","plazo",data.plazo||"")}${number("Escala (máximo)","escala",data.escala,1)}${number("Avance actual","valor",data.valor,1)}`; break;
+    }
+    case "kpis":{
+      data = id? findById(): {objetivoId:(store.plan.objetivos[0]||{}).id||"",nombre:"",unidad:"",baseline:0,meta:100,actual:0};
+      title.textContent=(id?"Editar":"Nuevo")+" KPI";
+      html=`${select("Objetivo","obj",store.plan.objetivos.map(o=>o.id),data.objetivoId)}<small class="helper">Se muestra el ID del objetivo. Al guardar, verá el nombre en la tabla.</small>${input("Nombre","nombre",data.nombre)}${input("Unidad","unidad",data.unidad)}${number("Base","base",data.baseline,1)}${number("Meta","meta",data.meta,1)}${number("Actual","actual",data.actual,1)}`; break;
+    }
+    case "iniciativas":{
+      data = id? findById(): {objetivoId:(store.plan.objetivos[0]||{}).id||"",titulo:"",responsable:"",inicio:"2025-01",fin:"2025-12",estado:"Plan"};
+      title.textContent=(id?"Editar":"Nueva")+" iniciativa/proyecto";
+      html=`${select("Objetivo","obj",store.plan.objetivos.map(o=>o.id),data.objetivoId)}${input("Título","titulo",data.titulo)}${input("Responsable","resp",data.responsable)}${input("Inicio (AAAA-MM)","inicio",data.inicio)}${input("Fin (AAAA-MM)","fin",data.fin)}${select("Estado","estado",["Plan","En curso","Finalizado","Pausado"],data.estado)}`; break;
+    }
+    case "politicas":{
+      data = id? findById(): {enunciado:""};
+      title.textContent=(id?"Editar":"Nueva")+" política";
+      html=`${textarea("Enunciado","enun",data.enunciado)}`; break;
+    }
+    case "cadena":{
+      data = id? findById(): {proceso:"",descripcion:""};
+      title.textContent=(id?"Editar":"Nuevo")+" proceso de cadena de valor";
+      html=`${input("Proceso","proc",data.proceso)}${textarea("Descripción","desc",data.descripcion)}`; break;
+    }
+    case "factores":{
+      data = id? findById(): {factor:"",importancia:3};
+      title.textContent=(id?"Editar":"Nuevo")+" factor clave";
+      html=`${input("Factor","factor",data.factor)}${number("Importancia (1-5)","imp",data.importancia,1)}`; break;
+    }
+    case "conclusiones":{
+      data = id? findById(): {texto:""};
+      title.textContent=(id?"Editar":"Nueva")+" conclusión";
+      html=`${textarea("Conclusión","texto",data.texto)}`; break;
+    }
+  }
+  body.innerHTML=html;
+  if(type==="efi") initLinkedFactorField("factorInterno");
+  if(type==="efe") initLinkedFactorField("factorExterno");
+  modal.style.display="flex";
+}
+
+function upsert(arr, item){
+  const idx=arr.findIndex(x=>x.id===item.id);
+  if(idx>=0) arr[idx]=item; else arr.push(item);
+}
+
+function bindRowActions(type){
+  $$("#content [data-edit]").forEach(b=>{
+    b.onclick=()=>openEditor(type, b.dataset.edit);
+  });
+  $$("#content [data-del]").forEach(b=>{
+    b.onclick=()=>{
+      if(!confirm("¿Eliminar elemento?")) return;
+      if(type==="foda"){
+        ["S","W","O","T"].forEach(k=>{
+          const arr=store.analisis.foda[k];
+          const idx=arr.findIndex(x=>x.id===b.dataset.del);
+          if(idx>=0) arr.splice(idx,1);
+        });
+      }else{
+        const getPath=()=>{
+          switch(type){
+            case "valores": return store.conceptos.valores;
+            case "pestel": return store.analisis.pestel;
+            case "efi": return store.analisis.efi;
+            case "efe": return store.analisis.efe;
+            case "bcg": return store.analisis.bcg;
+            case "ansoff": return store.analisis.ansoff;
+            case "ge": return store.analisis.ge;
+            case "adl": return store.analisis.adl;
+            case "objetivos": return store.plan.objetivos;
+            case "kpis": return store.plan.kpis;
+            case "iniciativas": return store.plan.iniciativas;
+            case "politicas": return store.plan.politicas;
+            case "cadena": return store.plan.cadenaValor;
+            case "factores": return store.plan.factoresClave;
+            case "conclusiones": return store.plan.conclusiones;
+          }
+        };
+        const arr=getPath(); const idx=arr.findIndex(x=>x.id===b.dataset.del); if(idx>=0) arr.splice(idx,1);
+      }
+      persist(); openModule(currentModule.id); toast("Elemento eliminado");
+    };
+  });
+}
+/* ==============================
+   Reports & Export
+============================== */
+function asCSV(rows, headers){
+  const esc = (v)=>'"'+String(v??"").replace(/"/g,'""')+'"';
+  return [headers.map(esc).join(","), ...rows.map(r=>headers.map(h=>esc(r[h])).join(","))].join("\n");
+}
+function downloadAll(){
+  const json = JSON.stringify(store,null,2);
+  download("plan_estrategico.json", json, "application/json");
+  const kcsv = asCSV(store.plan.kpis, ["nombre","unidad","baseline","meta","actual","objetivoId"]);
+  download("kpis.csv", kcsv, "text/csv");
+  const icsv = asCSV(store.plan.iniciativas, ["titulo","responsable","inicio","fin","estado","objetivoId"]);
+  download("iniciativas.csv", icsv, "text/csv");
+}
+function reporteEjecutivo(){
+  const w = window.open("","_blank");
+  const pct = (a,b)=> (b-a===0?0: ((store.plan.kpis.reduce((s,k)=>s+(k.actual>=k.meta?1:0),0)/Math.max(1,store.plan.kpis.length))*100)).toFixed(0);
+  w.document.write(`
+    <html><head><meta charset="utf-8"><title>Reporte Ejecutivo</title>
+      <style>body{font-family:Segoe UI,Arial,sans-serif;padding:28px;background:#fff;color:#111}
+      h1,h2{margin:0 0 8px} .muted{color:#555}
+      table{width:100%;border-collapse:collapse;margin:12px 0} th,td{border-bottom:1px solid #ddd;padding:6px 8px;text-align:left}
+      .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#111;color:#fff}
+      </style>
+    </head><body>
+      <h1>${store.meta.org||"Plan Estratégico"}</h1>
+      <div class="muted">Periodo ${store.meta.periodo||"—"}</div>
+      <p>${store.conceptos.mision?`<strong>Misión:</strong> ${store.conceptos.mision}`:""}</p>
+      <p>${store.conceptos.vision?`<strong>Visión:</strong> ${store.conceptos.vision}`:""}</p>
+      <h2>Objetivos</h2>
+      <table><thead><tr><th>Objetivo</th><th>Responsable</th><th>Plazo</th><th>Avance</th></tr></thead><tbody>
+        ${store.plan.objetivos.map(o=>`<tr><td>${o.titulo}</td><td>${o.owner||""}</td><td>${o.plazo||""}</td><td>${o.valor||0}/${o.escala||100}</td></tr>`).join("")}
+      </tbody></table>
+      <h2>KPIs</h2>
+      <table><thead><tr><th>Indicador</th><th>Objetivo</th><th>Base</th><th>Meta</th><th>Actual</th></tr></thead><tbody>
+        ${store.plan.kpis.map(k=>`<tr><td>${k.nombre}</td><td>${(store.plan.objetivos.find(o=>o.id===k.objetivoId)||{}).titulo||"—"}</td><td>${k.baseline}</td><td>${k.meta}</td><td>${k.actual}</td></tr>`).join("")}
+      </tbody></table>
+      <p><span class="badge">${pct(0,0)}% KPIs en meta</span></p>
+      <h2>Iniciativas</h2>
+      <table><thead><tr><th>Iniciativa</th><th>Responsable</th><th>Periodo</th><th>Estado</th></tr></thead><tbody>
+        ${store.plan.iniciativas.map(i=>`<tr><td>${i.titulo}</td><td>${i.responsable||""}</td><td>${i.inicio||""} → ${i.fin||""}</td><td>${i.estado||""}</td></tr>`).join("")}
+      </tbody></table>
+      <h2>Conclusiones</h2>
+      ${(store.plan.conclusiones||[]).map(c=>`<p>• ${c.texto}</p>`).join("")}
+      <script>window.print()<\/script>
+    </body></html>
+  `);
+  w.document.close();
+}
+
+/* ==============================
+   Module wiring
+============================== */
+let currentModule = MODULES[0];
+function openModule(id){
+  const mod = MODULES.find(m=>m.id===id);
+  if(!mod) return;
+  currentModule = mod;
+  setHeader(mod);
+  (RENDERERS[id]||(()=>{$("#content").textContent="(pendiente)"}))();
+}
+openModule("config");
+
+function importData(jsonData) {
+  try {
+    const importedStore = JSON.parse(jsonData);
+    if (!importedStore.meta || !importedStore.conceptos || !importedStore.analisis || !importedStore.plan) {
+      throw new Error('Formato de archivo inválido');
+    }
+    if (confirm('¿Desea reemplazar todos los datos actuales con los datos importados?')) {
+      store = importedStore;
+      persist();
+      openModule('config');
+      toast('Datos importados exitosamente', 'success');
+    }
+  } catch (error) {
+    toast('Error al importar datos: ' + error.message, 'error');
+  }
+}
+
+function exportEnhanced() {
+  const exportData = {
+    ...store,
+    exportInfo: {
+      version: '2.0',
+      exportDate: new Date().toISOString(),
+      appName: 'Suite de Planeación Estratégica'
+    }
+  };
+  const json = JSON.stringify(exportData, null, 2);
+  const filename = `plan_estrategico_${store.meta.org || 'organizacion'}_${new Date().toISOString().split('T')[0]}.json`;
+  download(filename, json, "application/json");
+  toast('Datos exportados exitosamente', 'success');
+}
+
+function createBackup() {
+  const backupData = {
+    ...store,
+    backupInfo: {
+      created: new Date().toISOString(),
+      version: '2.0'
+    }
+  };
+  const json = JSON.stringify(backupData, null, 2);
+  const filename = `backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+  download(filename, json, "application/json");
+  toast('Respaldo creado exitosamente', 'success');
+}
+
+function initMobileMenu() {
+  const mobileBtn = $("#mobileMenuBtn");
+  const overlay = $("#mobileOverlay");
+  const sidebar = $("aside");
+  mobileBtn.onclick = () => {
+    sidebar.classList.toggle('mobile-open');
+    overlay.classList.toggle('active');
+  };
+  overlay.onclick = () => {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('active');
+  };
+}
+
+function initImportExport() {
+  const modal = $("#importExportModal");
+  const dropArea = $("#dropArea");
+  const fileInput = $("#fileInput");
+  dropArea.ondragover = (e) => {
+    e.preventDefault();
+    dropArea.classList.add('dragover');
+  };
+  dropArea.ondragleave = () => {
+    dropArea.classList.remove('dragover');
+  };
+  dropArea.ondrop = (e) => {
+    e.preventDefault();
+    dropArea.classList.remove('dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFileImport(files[0]);
+    }
+  };
+  $("#selectFileBtn").onclick = () => fileInput.click();
+  dropArea.onclick = () => fileInput.click();
+  fileInput.onchange = (e) => {
+    if (e.target.files.length > 0) {
+      handleFileImport(e.target.files[0]);
+    }
+  };
+  $("#exportDataBtn").onclick = exportEnhanced;
+  $("#backupBtn").onclick = createBackup;
+  $("#importExportCancel").onclick = () => modal.style.display = "none";
+  modal.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
+}
+
+function handleFileImport(file) {
+  if (file.type !== 'application/json') {
+    toast('Por favor seleccione un archivo JSON válido', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    importData(e.target.result);
+    $("#importExportModal").style.display = "none";
+  };
+  reader.readAsText(file);
+}
+
+$("#btnAdd").onclick=()=>{
+  const type=currentModule.id;
+  const disallow=["config","mision","vision"];
+  if(disallow.includes(type)){
+    if(type==="mision"||type==="vision"){ toast("Edite el texto y presione Guardar."); return; }
+    if(type==="config"){ toast("Modifique los datos del formulario y guarde."); return; }
+  }
+  openEditor(type);
+};
+$("#btnDownload").onclick = () => $("#importExportModal").style.display = "flex";
+$("#btnReport").onclick=reporteEjecutivo;
+$("#btnReset").onclick=()=>{ if(confirm("Esto limpiará toda la información del plan ¿continuar?")){ store=structuredClone(blankStore); persist(); openModule("config"); toast("Datos limpiados", "success"); } };
+
+document.addEventListener('DOMContentLoaded', () => {
+  initMobileMenu();
+  initImportExport();
+});
+</script>
+</body>
+</html>
